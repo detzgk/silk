@@ -1,0 +1,4 @@
+[package]
+name = "urlmatch"
+version = "0.1.0"
+authors = ["Eli Green <eli@zigr.org>"]
