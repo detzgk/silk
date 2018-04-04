@@ -53,9 +53,11 @@ fn matches(iter : &mut Peekable<Chars>, text: &'static str) -> bool {
             if ch != oth {
                 return false;
             }
+        } else {
+            return true;
         }
     }
-    return false;
+    return true;
 }
 
 macro_rules! urlmatch {
