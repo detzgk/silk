@@ -70,7 +70,7 @@ macro_rules! urlmatch {
 }
 
 macro_rules! branch {
-    ($iter:ident, $default:expr, $body:expr, $verb:ident, ( $( $url:tt )+ ), $( $bodies:expr, $verbs:ident, ( $( $urlses:tt )+ ) )+) => {
+    ($iter:ident, $default:expr, $body:expr, $verb:ident, ( $( $url:tt )+ ), $( $bodies:expr, $verbs:ident, ( $( $urlses:tt )+ ) ),+) => {
         if let Some(result) = all_predicates!($iter, $body, $($url)+) {
             result
         } else {
