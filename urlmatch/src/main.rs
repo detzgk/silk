@@ -63,6 +63,10 @@ fn matches(iter : &mut Peekable<Chars>, text: &'static str) -> bool {
 macro_rules! urlmatch {
     ($iter:expr, $( $verb:ident ( $( $url:tt )+ ) => $body:expr ),+, _ => $default:expr) => (
         {
+            #[allow(unused_imports)]
+            use UrlParser;
+            use matches;
+
             let mut url_iter = $iter.chars().peekable();
             branch!(url_iter, $default, $( $body, $verb, ( $( $url )+ ) ),+ )
         }
