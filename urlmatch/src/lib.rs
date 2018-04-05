@@ -115,17 +115,3 @@ macro_rules! all_predicates {
 
 const GET: &'static str = "GET";
 const POST: &'static str = "POST";
-
-fn main() {
-    let url = "/foo/bar/10";
-
-    let res = urlmatch!(url,
-        GET ("/foo/bar", u:i32) => { 
-            u
-        },
-        POST ("/foo/bar") => { 10 },
-        _ => { 5 }
-    );
-
-    println!("Result: {}", res);
-}
