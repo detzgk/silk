@@ -46,7 +46,7 @@ impl_num_parser!(i16);
 impl_num_parser!(i32);
 impl_num_parser!(i64);
 
-fn matches(iter : &mut Peekable<Chars>, text: &'static str) -> bool {
+pub fn matches(iter : &mut Peekable<Chars>, text: &'static str) -> bool {
     let mut other = text.chars();
     for ch in iter {
         if let Some(oth) = other.next() {
@@ -60,6 +60,7 @@ fn matches(iter : &mut Peekable<Chars>, text: &'static str) -> bool {
     return true;
 }
 
+#[macro_export]
 macro_rules! urlmatch {
     ($iter:expr, $( $verb:ident ( $( $url:tt )+ ) => $body:expr ),+, _ => $default:expr) => (
         {
@@ -73,16 +74,17 @@ macro_rules! urlmatch {
     )
 }
 
+#[allow(unused_macros)]
 macro_rules! branch {
     ($iter:ident, $default:expr, $body:expr, $verb:ident, ( $( $url:tt )+ ), $( $bodies:expr, $verbs:ident, ( $( $urlses:tt )+ ) ),+) => {
-        if let Some(result) = all_predicates!($iter, $body, $($url)+) {
+        if let Some(result) = predicates!($iter, $body, $($url)+) {
             result
         } else {
             branch!($iter, $default, $( $bodies, $verbs, ( $( $urlses )+ ) ),+ )
         }
     };
     ($iter:ident, $default:expr, $body:expr, $verb:ident, ( $( $url:tt )+ ) ) => {
-        if let Some(result) = all_predicates!($iter, $body, $($url)+) {
+        if let Some(result) = predicates!($iter, $body, $($url)+) {
             result
         } else {
             $default
@@ -90,10 +92,11 @@ macro_rules! branch {
     };
 }
 
-macro_rules! all_predicates {
+#[allow(unused_macros)]
+macro_rules! predicates {
     ($iter:ident, $body:expr, $first:tt, $( $rest:tt )+) => (
         if matches(&mut $iter, $first) {
-            all_predicates!($iter, $body, $($rest)+)
+            predicates!($iter, $body, $($rest)+)
         } else { None }
     );
     ($iter:ident, $body:expr, $first:tt) => (
@@ -103,7 +106,7 @@ macro_rules! all_predicates {
     );
     ($iter:ident, $body:expr, $first:ident : $ty:ty, $( $rest:tt )+) => (
         if let Some($first) = <$ty as UrlParser>::parse_from_url(&mut $iter) {
-            all_predicates!($iter, $body, $($rest)+)
+            predicates!($iter, $body, $($rest)+)
         } else { None }
     );
     ($iter:ident, $body:expr, $first:ident : $ty:ty) => (
@@ -113,5 +116,24 @@ macro_rules! all_predicates {
     );
 }
 
-const GET: &'static str = "GET";
-const POST: &'static str = "POST";
+pub const GET: &'static str = "GET";
+pub const POST: &'static str = "POST";
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn match_success() {
+        assert!(urlmatch!("/foo/bar",
+            GET ("/foo/bar") => true,
+            _ => false
+        ));
+    }
+
+    #[test]
+    fn match_failure() {
+        assert!(urlmatch!("/foo/fail",
+            GET ("/foo/bar") => false,
+            _ => true
+        ));
+    }
+}
