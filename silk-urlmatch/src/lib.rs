@@ -47,15 +47,15 @@ impl_num_parser!(i32);
 impl_num_parser!(i64);
 
 pub fn matches(iter : &mut Peekable<Chars>, text: &'static str) -> bool {
-    let mut other = text.chars();
-    for ch in iter {
-        if let Some(oth) = other.next() {
-            if ch != oth {
-                return false;
-            }
-        } else {
-            return true;
+    for ch in text.chars() {
+        let other : char = match iter.peek() {
+            Some(ch) => *ch,
+            None => return false
+        };
+        if other != ch {
+            return false;
         }
+        iter.next();
     }
     return true;
 }
@@ -133,6 +133,22 @@ mod tests {
     fn match_failure() {
         assert!(urlmatch!("/foo/fail",
             GET ("/foo/bar") => false,
+            _ => true
+        ));
+    }
+
+    #[test]
+    fn parser_success() {
+        assert!(urlmatch!("/foo/5",
+            GET ("/foo/", _id:u8) => true,
+            _ => false
+        ));
+    }
+
+    #[test]
+    fn parser_failure() {
+        assert!(urlmatch!("/foo/0xDEADBEEF",
+            GET ("/foo/", _id:u32) => false,
             _ => true
         ));
     }
