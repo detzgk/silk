@@ -49,7 +49,7 @@ impl_num_parser!(i64);
 pub fn matches(iter : &mut Peekable<Chars>, text: &'static str) -> bool {
     for ch in text.chars() {
         let other : char = match iter.peek() {
-            Some(ch) => *ch,
+            Some(&ch) => ch,
             None => return false
         };
         if other != ch {
@@ -77,10 +77,13 @@ macro_rules! urlmatch {
 #[allow(unused_macros)]
 macro_rules! branch {
     ($iter:ident, $default:expr, $body:expr, $verb:ident, ( $( $url:tt )+ ), $( $bodies:expr, $verbs:ident, ( $( $urlses:tt )+ ) ),+) => {
-        if let Some(result) = predicates!($iter, $body, $($url)+) {
-            result
-        } else {
-            branch!($iter, $default, $( $bodies, $verbs, ( $( $urlses )+ ) ),+ )
+        {
+            let mut next_iter = $iter.clone();
+            if let Some(result) = predicates!(next_iter, $body, $($url)+) {
+                result
+            } else {
+                branch!($iter, $default, $( $bodies, $verbs, ( $( $urlses )+ ) ),+ )
+            }
         }
     };
     ($iter:ident, $default:expr, $body:expr, $verb:ident, ( $( $url:tt )+ ) ) => {
@@ -150,6 +153,15 @@ mod tests {
         assert!(urlmatch!("/foo/0xDEADBEEF",
             GET ("/foo/", _id:u32) => false,
             _ => true
+        ));
+    }
+
+    #[test]
+    fn multiarm_success() {
+        assert!(urlmatch!("/foo/5",
+            GET ("/foo/bar") => false,
+            GET ("/foo/", _id:u8) => true,
+            _ => false
         ));
     }
 }
