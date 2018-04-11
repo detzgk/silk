@@ -62,37 +62,46 @@ pub fn matches(iter : &mut Peekable<Chars>, text: &'static str) -> bool {
 
 #[macro_export]
 macro_rules! urlmatch {
-    ($iter:expr, $( $verb:ident ( $( $url:tt )+ ) => $body:expr ),+, _ => $default:expr) => (
+    ($request_verb:ident, $url:expr, $( $verb:ident ( $( $match_url:tt )+ ) => $body:expr ),+, _ => $default:expr) => (
         {
             #[allow(unused_imports)]
             use UrlParser;
             use matches;
 
-            let mut url_iter = $iter.chars().peekable();
-            branch!(url_iter, $default, $( $body, $verb, ( $( $url )+ ) ),+ )
+            let mut url_iter = $url.chars().peekable();
+            branch!($request_verb, url_iter, $default, $( $body, $verb, ( $( $match_url )+ ) ),+ )
         }
     )
 }
 
 #[allow(unused_macros)]
 macro_rules! branch {
-    ($iter:ident, $default:expr, $body:expr, $verb:ident, ( $( $url:tt )+ ), $( $bodies:expr, $verbs:ident, ( $( $urlses:tt )+ ) ),+) => {
+    ($request_verb:ident, $iter:ident, $default:expr, $body:expr, $verb:ident, ( $( $url:tt )+ ), $( $bodies:expr, $verbs:ident, ( $( $urlses:tt )+ ) ),+) => {
         {
             let mut next_iter = $iter.clone();
-            if let Some(result) = predicates!(next_iter, $body, $($url)+) {
+            if let Some(result) = match_verb!($request_verb, $verb, next_iter, $body, $($url)+) {
                 result
             } else {
-                branch!($iter, $default, $( $bodies, $verbs, ( $( $urlses )+ ) ),+ )
+                branch!($request_verb, $iter, $default, $( $bodies, $verbs, ( $( $urlses )+ ) ),+ )
             }
         }
     };
-    ($iter:ident, $default:expr, $body:expr, $verb:ident, ( $( $url:tt )+ ) ) => {
-        if let Some(result) = predicates!($iter, $body, $($url)+) {
+    ($request_verb:ident, $iter:ident, $default:expr, $body:expr, $verb:ident, ( $( $url:tt )+ ) ) => {
+        if let Some(result) = match_verb!($request_verb, $verb, $iter, $body, $($url)+) {
             result
         } else {
             $default
         }
     };
+}
+
+#[allow(unused_macros)]
+macro_rules! match_verb {
+    ($request_verb:ident, $verb:ident, $iter:ident, $body:expr, $( $url:tt )+) => (
+        if $request_verb == $verb {
+            predicates!($iter, $body, $($url)+)
+        } else { None }
+    )
 }
 
 #[allow(unused_macros)]
@@ -119,14 +128,14 @@ macro_rules! predicates {
     );
 }
 
-pub const GET: &'static str = "GET";
-pub const POST: &'static str = "POST";
-
 #[cfg(test)]
 mod tests {
+    pub const GET: &'static str = "GET";
+    pub const POST: &'static str = "POST";
+
     #[test]
     fn match_success() {
-        assert!(urlmatch!("/foo/bar",
+        assert!(urlmatch!(GET, "/foo/bar",
             GET ("/foo/bar") => true,
             _ => false
         ));
@@ -134,7 +143,7 @@ mod tests {
 
     #[test]
     fn match_failure() {
-        assert!(urlmatch!("/foo/fail",
+        assert!(urlmatch!(GET, "/foo/fail",
             GET ("/foo/bar") => false,
             _ => true
         ));
@@ -142,7 +151,7 @@ mod tests {
 
     #[test]
     fn parser_success() {
-        assert!(urlmatch!("/foo/5",
+        assert!(urlmatch!(GET, "/foo/5",
             GET ("/foo/", _id:u8) => true,
             _ => false
         ));
@@ -150,7 +159,7 @@ mod tests {
 
     #[test]
     fn parser_failure() {
-        assert!(urlmatch!("/foo/0xDEADBEEF",
+        assert!(urlmatch!(GET, "/foo/0xDEADBEEF",
             GET ("/foo/", _id:u32) => false,
             _ => true
         ));
@@ -158,9 +167,18 @@ mod tests {
 
     #[test]
     fn multiarm_success() {
-        assert!(urlmatch!("/foo/5",
+        assert!(urlmatch!(GET, "/foo/5",
             GET ("/foo/bar") => false,
             GET ("/foo/", _id:u8) => true,
+            _ => false
+        ));
+    }
+
+    #[test]
+    fn match_verb() {
+        assert!(urlmatch!(POST, "/foo/bar",
+            GET ("/foo/bar") => false,
+            POST ("/foo/bar") => true,
             _ => false
         ));
     }
