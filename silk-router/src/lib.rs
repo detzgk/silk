@@ -61,7 +61,7 @@ pub fn matches(iter : &mut Peekable<Chars>, text: &'static str) -> bool {
 }
 
 #[macro_export]
-macro_rules! urlmatch {
+macro_rules! route_match {
     ($request_verb:ident, $url:expr, $( $verb:ident ( $( $match_url:tt )+ ) => $body:expr ),+, _ => $default:expr) => (
         {
             #[allow(unused_imports)]
@@ -70,6 +70,16 @@ macro_rules! urlmatch {
 
             let mut url_iter = $url.chars().peekable();
             branch!($request_verb, url_iter, $default, $( $body, $verb, ( $( $match_url )+ ) ),+ )
+        }
+    );
+    ($url:expr, $( ( $( $match_url:tt )+ ) => $body:expr ),+, _ => $default:expr) => (
+        {
+            #[allow(unused_imports)]
+            use UrlParser;
+            use matches;
+
+            let mut url_iter = $url.chars().peekable();
+            branch!(url_iter, $default, $( $body, ( $( $match_url )+ ) ),+ )
         }
     )
 }
@@ -88,6 +98,23 @@ macro_rules! branch {
     };
     ($request_verb:ident, $iter:ident, $default:expr, $body:expr, $verb:ident, ( $( $url:tt )+ ) ) => {
         if let Some(result) = match_verb!($request_verb, $verb, $iter, $body, $($url)+) {
+            result
+        } else {
+            $default
+        }
+    };
+    ($iter:ident, $default:expr, $body:expr, ( $( $url:tt )+ ), $( $bodies:expr, ( $( $urlses:tt )+ ) ),+) => {
+        {
+            let mut next_iter = $iter.clone();
+            if let Some(result) = predicates!(next_iter, $body, $($url)+) {
+                result
+            } else {
+                branch!($iter, $default, $( $bodies, ( $( $urlses )+ ) ),+ )
+            }
+        }
+    };
+    ($iter:ident, $default:expr, $body:expr, ( $( $url:tt )+ ) ) => {
+        if let Some(result) = predicates!($iter, $body, $($url)+) {
             result
         } else {
             $default
@@ -135,48 +162,48 @@ mod tests {
 
     #[test]
     fn match_success() {
-        assert!(urlmatch!(GET, "/foo/bar",
-            GET ("/foo/bar") => true,
+        assert!(route_match!("/foo/bar",
+            ("/foo/bar") => true,
             _ => false
         ));
     }
 
     #[test]
     fn match_failure() {
-        assert!(urlmatch!(GET, "/foo/fail",
-            GET ("/foo/bar") => false,
+        assert!(route_match!("/foo/fail",
+            ("/foo/bar") => false,
             _ => true
         ));
     }
 
     #[test]
     fn parser_success() {
-        assert!(urlmatch!(GET, "/foo/5",
-            GET ("/foo/", _id:u8) => true,
+        assert!(route_match!("/foo/5",
+            ("/foo/", _id:u8) => true,
             _ => false
         ));
     }
 
     #[test]
     fn parser_failure() {
-        assert!(urlmatch!(GET, "/foo/0xDEADBEEF",
-            GET ("/foo/", _id:u32) => false,
+        assert!(route_match!("/foo/0xDEADBEEF",
+            ("/foo/", _id:u32) => false,
             _ => true
         ));
     }
 
     #[test]
     fn multiarm_success() {
-        assert!(urlmatch!(GET, "/foo/5",
-            GET ("/foo/bar") => false,
-            GET ("/foo/", _id:u8) => true,
+        assert!(route_match!("/foo/5",
+            ("/foo/bar") => false,
+            ("/foo/", _id:u8) => true,
             _ => false
         ));
     }
 
     #[test]
     fn match_verb() {
-        assert!(urlmatch!(POST, "/foo/bar",
+        assert!(route_match!(POST, "/foo/bar",
             GET ("/foo/bar") => false,
             POST ("/foo/bar") => true,
             _ => false
