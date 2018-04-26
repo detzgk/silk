@@ -32,7 +32,7 @@ Patches that require nightly won't be considered. Feel free to fork.
 URL routing in the style of rust's pattern matching.
 
 ```rust
-    route_match!(POST, "/foo/bar",
+    route_match!(request.verb, request.url,
         GET ("/user", ) => user_list(),
         GET ("/user/", id:u32) => user_details(id),
         POST ("/user") => create_user(),
