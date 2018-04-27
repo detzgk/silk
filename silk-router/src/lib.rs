@@ -193,6 +193,15 @@ mod tests {
     }
 
     #[test]
+    fn first_match() {
+        assert!(route_match!("/foo",
+            ("/foo") => true,
+            ("/foo") => false,
+            _ => false
+        ));
+    }
+
+    #[test]
     fn multiarm_success() {
         assert!(route_match!("/foo/5",
             ("/foo/bar") => false,
