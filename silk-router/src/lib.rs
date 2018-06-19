@@ -37,6 +37,23 @@ macro_rules! impl_num_parser {
     }
 }
 
+pub fn until(delim: char) -> impl FnMut(&mut Peekable<Chars>) -> Option<String> {
+    move |peekable| {
+        let mut result = String::new();
+        for ch in peekable {
+            if ch == delim {
+                return Some(result);
+            }
+            result.push(ch);
+        }
+        None
+    }
+}
+
+pub fn rest(iter: &mut Peekable<Chars>) -> Option<String> {
+    Some(iter.collect())
+}
+
 impl_num_parser!(u8);
 impl_num_parser!(u16);
 impl_num_parser!(u32);
@@ -66,6 +83,7 @@ macro_rules! route_match {
         {
             #[allow(unused_imports)]
             use UrlParser;
+            #[allow(unused_imports)]
             use matches;
 
             let mut url_iter = $url.chars().peekable();
@@ -76,6 +94,7 @@ macro_rules! route_match {
         {
             #[allow(unused_imports)]
             use UrlParser;
+            #[allow(unused_imports)]
             use matches;
 
             let mut url_iter = $url.chars().peekable();
@@ -153,12 +172,25 @@ macro_rules! predicates {
             Some($body)
         } else { None }
     );
+    ($iter:ident, $body:expr, $first:ident = $parser:expr, $( $rest:tt )+) => (
+        if let Some($first) = $parser(&mut $iter) {
+            predicates!($iter, $body, $($rest)+)
+        } else { None }
+    );
+    ($iter:ident, $body:expr, $first:ident = $parser:expr) => (
+        if let Some($first) = $parser(&mut $iter) {
+            Some($body)
+        } else { None }
+    );
 }
 
 #[cfg(test)]
 mod tests {
     pub const GET: &'static str = "GET";
     pub const POST: &'static str = "POST";
+ 
+    use super::until;
+    use super::rest;
 
     #[test]
     fn match_success() {
@@ -179,7 +211,7 @@ mod tests {
     #[test]
     fn parser_success() {
         assert!(route_match!("/foo/5",
-            ("/foo/", _id:u8) => true,
+            ("/foo/", id:u8) => id == 5,
             _ => false
         ));
     }
@@ -215,6 +247,16 @@ mod tests {
         assert!(route_match!(POST, "/foo/bar",
             GET ("/foo/bar") => false,
             POST ("/foo/bar") => true,
+            _ => false
+        ));
+    }
+
+    #[test]
+    fn match_fun() {
+        assert!(route_match!(GET, "/foo/groucho:swordfish",
+            GET ("/foo/", username = until(':'), password = rest) => 
+                username == "groucho" && password == "swordfish",
+            // GET (foo = five) => true,
             _ => false
         ));
     }
