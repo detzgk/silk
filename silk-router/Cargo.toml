@@ -2,3 +2,6 @@
 name = "silk-router"
 version = "0.1.0"
 authors = ["Eli Green <eli@zigr.org>"]
+
+[dependencies]
+num = "0.1.42" # TODO: replace with TryFrom when it stabilizes

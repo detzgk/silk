@@ -1,39 +1,32 @@
+extern crate num;
+
 use std::iter::Peekable;
 use std::str::Chars;
-use std::u32;
 
-pub trait UrlParser: Sized {
-    fn parse_from_url(&mut Peekable<Chars>) -> Option<Self>;
-}
+use num::{CheckedAdd, CheckedMul, Num, NumCast};
 
-macro_rules! impl_num_parser {
-    ($num:ty) => {
-        impl UrlParser for $num {
-            fn parse_from_url(iter : &mut Peekable<Chars>) -> Option<$num> {
-                let mut consumed = 0 as $num;
-                let mut result = 0 as $num;
-                for ch in iter {
-                    consumed += 1;
-                    let x = match ch.to_digit(10) {
-                        Some(x) => x as $num,
-                        None => return None,
-                    };
-                    result = match result.checked_mul(10) {
-                        Some(result) => result,
-                        None => return None,
-                    };
-                    result = match result.checked_add(x) {
-                        Some(result) => result,
-                        None => return None,
-                    };
-                }
-                if consumed == 0 {
-                    None
-                } else {
-                    Some(result)
-                }
-            }
-        }
+pub fn num<T>(iter : &mut Peekable<Chars>) -> Option<T> where T: Num+NumCast+CheckedAdd+CheckedMul {
+    let mut consumed = 0u8;
+    let mut result = T::zero();
+    for ch in iter {
+        consumed += 1;
+        let x = match ch.to_digit(10) {
+            Some(x) => <T as NumCast>::from(x).unwrap(),
+            None => return None,
+        };
+        result = match result.checked_mul(&<T as NumCast>::from(10).unwrap()) {
+            Some(result) => result,
+            None => return None,
+        };
+        result = match result.checked_add(&x) {
+            Some(result) => result,
+            None => return None,
+        };
+    }
+    if consumed == 0 {
+        None
+    } else {
+        Some(result)
     }
 }
 
@@ -54,15 +47,6 @@ pub fn rest(iter: &mut Peekable<Chars>) -> Option<String> {
     Some(iter.collect())
 }
 
-impl_num_parser!(u8);
-impl_num_parser!(u16);
-impl_num_parser!(u32);
-impl_num_parser!(u64);
-impl_num_parser!(i8);
-impl_num_parser!(i16);
-impl_num_parser!(i32);
-impl_num_parser!(i64);
-
 pub fn matches(iter : &mut Peekable<Chars>, text: &'static str) -> bool {
     for ch in text.chars() {
         let other : char = match iter.peek() {
@@ -82,8 +66,6 @@ macro_rules! route_match {
     ($request_verb:ident, $url:expr, $( $verb:ident ( $( $match_url:tt )+ ) => $body:expr ),+, _ => $default:expr) => (
         {
             #[allow(unused_imports)]
-            use UrlParser;
-            #[allow(unused_imports)]
             use matches;
 
             let mut url_iter = $url.chars().peekable();
@@ -92,8 +74,6 @@ macro_rules! route_match {
     );
     ($url:expr, $( ( $( $match_url:tt )+ ) => $body:expr ),+, _ => $default:expr) => (
         {
-            #[allow(unused_imports)]
-            use UrlParser;
             #[allow(unused_imports)]
             use matches;
 
@@ -162,16 +142,6 @@ macro_rules! predicates {
             Some($body)
         } else { None }
     );
-    ($iter:ident, $body:expr, $first:ident : $ty:ty, $( $rest:tt )+) => (
-        if let Some($first) = <$ty as UrlParser>::parse_from_url(&mut $iter) {
-            predicates!($iter, $body, $($rest)+)
-        } else { None }
-    );
-    ($iter:ident, $body:expr, $first:ident : $ty:ty) => (
-        if let Some($first) = <$ty as UrlParser>::parse_from_url(&mut $iter) {
-            Some($body)
-        } else { None }
-    );
     ($iter:ident, $body:expr, $first:ident = $parser:expr, $( $rest:tt )+) => (
         if let Some($first) = $parser(&mut $iter) {
             predicates!($iter, $body, $($rest)+)
@@ -189,6 +159,7 @@ mod tests {
     pub const GET: &'static str = "GET";
     pub const POST: &'static str = "POST";
  
+    use super::num;
     use super::until;
     use super::rest;
 
@@ -211,7 +182,7 @@ mod tests {
     #[test]
     fn parser_success() {
         assert!(route_match!("/foo/5",
-            ("/foo/", id:u8) => id == 5,
+            ("/foo/", id = num::<u8>) => id == 5,
             _ => false
         ));
     }
@@ -219,7 +190,7 @@ mod tests {
     #[test]
     fn parser_failure() {
         assert!(route_match!("/foo/0xDEADBEEF",
-            ("/foo/", _id:u32) => false,
+            ("/foo/", _id = num::<u32>) => false,
             _ => true
         ));
     }
@@ -237,7 +208,7 @@ mod tests {
     fn multiarm_success() {
         assert!(route_match!("/foo/5",
             ("/foo/bar") => false,
-            ("/foo/", _id:u8) => true,
+            ("/foo/", _id = num::<u8>) => true,
             _ => false
         ));
     }
