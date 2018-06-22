@@ -5,7 +5,10 @@ use std::str::Chars;
 
 use num::{CheckedAdd, CheckedMul, Num, NumCast};
 
-pub fn num<T>(iter : &mut Peekable<Chars>) -> Option<T> where T: Num+NumCast+CheckedAdd+CheckedMul {
+pub fn num<T>(iter: &mut Peekable<Chars>) -> Option<T>
+where
+    T: Num + NumCast + CheckedAdd + CheckedMul,
+{
     let mut consumed = 0u8;
     let mut result = T::zero();
     for ch in iter {
@@ -47,11 +50,11 @@ pub fn rest(iter: &mut Peekable<Chars>) -> Option<String> {
     Some(iter.collect())
 }
 
-pub fn matches(iter : &mut Peekable<Chars>, text: &'static str) -> bool {
+pub fn matches(iter: &mut Peekable<Chars>, text: &'static str) -> bool {
     for ch in text.chars() {
-        let other : char = match iter.peek() {
+        let other: char = match iter.peek() {
             Some(&ch) => ch,
-            None => return false
+            None => return false,
         };
         if other != ch {
             return false;
@@ -158,10 +161,10 @@ macro_rules! predicates {
 mod tests {
     pub const GET: &'static str = "GET";
     pub const POST: &'static str = "POST";
- 
+
     use super::num;
-    use super::until;
     use super::rest;
+    use super::until;
 
     #[test]
     fn match_success() {
