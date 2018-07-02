@@ -58,7 +58,7 @@ pub fn matches(iter: &mut Peekable<Chars>, text: &'static str) -> bool {
 /// Pattern-match-style URL routing
 #[macro_export]
 macro_rules! route_match {
-    ($request_verb:ident, $url:expr, $( $verb:ident ( $( $match_url:tt )+ ) => $body:expr ),+, _ => $default:expr) => (
+    ($request_verb:expr, $url:expr, $( $verb:ident ( $( $match_url:tt )+ ) => $body:expr ),+, _ => $default:expr) => (
         {
             #[allow(unused_imports)]
             use matches;
@@ -80,7 +80,7 @@ macro_rules! route_match {
 
 #[macro_export]
 macro_rules! branch {
-    ($request_verb:ident, $iter:ident, $default:expr, $body:expr, $verb:ident, ( $( $url:tt )+ ), $( $bodies:expr, $verbs:ident, ( $( $urlses:tt )+ ) ),+) => {
+    ($request_verb:expr, $iter:ident, $default:expr, $body:expr, $verb:expr, ( $( $url:tt )+ ), $( $bodies:expr, $verbs:ident, ( $( $urlses:tt )+ ) ),+) => {
         {
             let mut next_iter = $iter.clone();
             if let Some(result) = match_verb!($request_verb, $verb, next_iter, $body, $($url)+) {
@@ -90,7 +90,7 @@ macro_rules! branch {
             }
         }
     };
-    ($request_verb:ident, $iter:ident, $default:expr, $body:expr, $verb:ident, ( $( $url:tt )+ ) ) => {
+    ($request_verb:expr, $iter:ident, $default:expr, $body:expr, $verb:expr, ( $( $url:tt )+ ) ) => {
         if let Some(result) = match_verb!($request_verb, $verb, $iter, $body, $($url)+) {
             result
         } else {
@@ -118,7 +118,7 @@ macro_rules! branch {
 
 #[macro_export]
 macro_rules! match_verb {
-    ($request_verb:ident, $verb:ident, $iter:ident, $body:expr, $( $url:tt )+) => (
+    ($request_verb:expr, $verb:expr, $iter:ident, $body:expr, $( $url:tt )+) => (
         if $request_verb == $verb {
             predicates!($iter, $body, $($url)+)
         } else { None }
