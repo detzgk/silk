@@ -2,6 +2,10 @@
 name = "silk-router"
 version = "0.1.0"
 authors = ["Eli Green <eli@zigr.org>"]
+description = "A library for URL routing"
+repository = "https://github.com/detzgk/silk"
+categories = ["web-programming::http-server"]
+license = "MIT"
 
 [dependencies]
 num = "0.1.42" # TODO: replace with TryFrom when it stabilizes
