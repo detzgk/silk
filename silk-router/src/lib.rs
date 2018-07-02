@@ -33,6 +33,9 @@
 //! Expression matches: `ident = expr` call the function returned by `expr`
 //! which must be a `FnMut(&mut Peekable<Chars>) -> Option<T>`. If the branch
 //! matches, the identifier will be a block-scoped variable with type `T`.
+//! 
+//! Matches are exhaustive: the entire URL must have been consumed. The
+//! `parsers::rest` parser can be used to consume the end of the string.
 
 extern crate num;
 
@@ -134,7 +137,9 @@ macro_rules! predicates {
     );
     ($iter:ident, $body:expr, $first:tt) => (
         if matches(&mut $iter, $first) {
-            Some($body)
+            if $iter.peek() == None {
+                Some($body)
+            } else { None }
         } else { None }
     );
     ($iter:ident, $body:expr, $first:ident = $parser:expr, $( $rest:tt )+) => (
@@ -144,7 +149,9 @@ macro_rules! predicates {
     );
     ($iter:ident, $body:expr, $first:ident = $parser:expr) => (
         if let Some($first) = $parser(&mut $iter) {
-            Some($body)
+            if $iter.peek() == None {
+                Some($body)
+            } else { None }
         } else { None }
     );
 }
@@ -220,6 +227,15 @@ mod tests {
         assert!(route_match!(GET, "/foo/groucho:swordfish",
             GET ("/foo/", username = until(':'), password = rest) => 
                 username == "groucho" && password == "swordfish",
+            _ => false
+        ));
+    }
+
+    #[test]
+    fn match_full() {
+        assert!(route_match!("/abcde",
+            ("/abcd") => false,
+            ("/abcde") => true,
             _ => false
         ));
     }
