@@ -1,3 +1,39 @@
+//! `silk_router` is a URL routing library inspired by rust's pattern matching
+//! syntax.
+//!
+//! ```rust
+//!     route_match!(request.verb, request.url,
+//!        GET ("/user") => user_list(),
+//!        GET ("/user/", id = num::<u32>) => user_details(id),
+//!        POST ("/user") => create_user(),
+//!        PUT ("/user/", id = num::<u32>) => update_user(id),
+//!        _ => error(404, "Not Found")
+//!    );
+//! ```
+//!
+//! It is agnostic to the HTTP library you are using. HTTP verbs are checked for
+//! strict equality. The URL must support a `.chars()` method returning a
+//! `std::str::Chars`. The verbs can be omitted, especially useful for nesting
+//! match statements:
+//!
+//! ```rust
+//!     route_match!(request.verb, request.url,
+//!         GET ("/user", id = num::<u32>, sub_url = rest) => {
+//!             let user = load_user(id);
+//!             route_match!(sub_url
+//!                 ("/settings") => user_settings(user),
+//!                 ("/token") => user_token(user),
+//!                 _ => user_info(user)
+//!             )
+//!         }
+//!     );
+//! ```
+//!
+//! Inside the match expressions, strings are checkd for exact equality.
+//! Expression matches: `ident = expr` call the function returned by `expr`
+//! which must be a `FnMut(&mut Peekable<Chars>) -> Option<T>`. If the branch
+//! matches, the identifier will be a block-scoped variable with type `T`.
+
 extern crate num;
 
 use std::iter::Peekable;
