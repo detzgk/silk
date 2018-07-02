@@ -41,8 +41,7 @@ use std::str::Chars;
 
 pub mod parsers;
 
-#[allow(dead_code)] // Not dead code: it's used by the macros
-fn matches(iter: &mut Peekable<Chars>, text: &'static str) -> bool {
+pub fn matches(iter: &mut Peekable<Chars>, text: &'static str) -> bool {
     for ch in text.chars() {
         let other: char = match iter.peek() {
             Some(&ch) => ch,
@@ -79,7 +78,7 @@ macro_rules! route_match {
     )
 }
 
-#[allow(unused_macros)]
+#[macro_export]
 macro_rules! branch {
     ($request_verb:ident, $iter:ident, $default:expr, $body:expr, $verb:ident, ( $( $url:tt )+ ), $( $bodies:expr, $verbs:ident, ( $( $urlses:tt )+ ) ),+) => {
         {
@@ -117,7 +116,7 @@ macro_rules! branch {
     };
 }
 
-#[allow(unused_macros)]
+#[macro_export]
 macro_rules! match_verb {
     ($request_verb:ident, $verb:ident, $iter:ident, $body:expr, $( $url:tt )+) => (
         if $request_verb == $verb {
@@ -126,7 +125,7 @@ macro_rules! match_verb {
     )
 }
 
-#[allow(unused_macros)]
+#[macro_export]
 macro_rules! predicates {
     ($iter:ident, $body:expr, $first:tt, $( $rest:tt )+) => (
         if matches(&mut $iter, $first) {
