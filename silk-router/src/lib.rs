@@ -3,54 +3,9 @@ extern crate num;
 use std::iter::Peekable;
 use std::str::Chars;
 
-use num::{CheckedAdd, CheckedMul, Num, NumCast};
+pub mod parsers;
 
-pub fn num<T>(iter: &mut Peekable<Chars>) -> Option<T>
-where
-    T: Num + NumCast + CheckedAdd + CheckedMul,
-{
-    let mut consumed = 0u8;
-    let mut result = T::zero();
-    for ch in iter {
-        consumed += 1;
-        let x = match ch.to_digit(10) {
-            Some(x) => <T as NumCast>::from(x).unwrap(),
-            None => return None,
-        };
-        result = match result.checked_mul(&<T as NumCast>::from(10).unwrap()) {
-            Some(result) => result,
-            None => return None,
-        };
-        result = match result.checked_add(&x) {
-            Some(result) => result,
-            None => return None,
-        };
-    }
-    if consumed == 0 {
-        None
-    } else {
-        Some(result)
-    }
-}
-
-pub fn until(delim: char) -> impl FnMut(&mut Peekable<Chars>) -> Option<String> {
-    move |peekable| {
-        let mut result = String::new();
-        for ch in peekable {
-            if ch == delim {
-                return Some(result);
-            }
-            result.push(ch);
-        }
-        None
-    }
-}
-
-pub fn rest(iter: &mut Peekable<Chars>) -> Option<String> {
-    Some(iter.collect())
-}
-
-pub fn matches(iter: &mut Peekable<Chars>, text: &'static str) -> bool {
+fn matches(iter: &mut Peekable<Chars>, text: &'static str) -> bool {
     for ch in text.chars() {
         let other: char = match iter.peek() {
             Some(&ch) => ch,
@@ -64,6 +19,7 @@ pub fn matches(iter: &mut Peekable<Chars>, text: &'static str) -> bool {
     return true;
 }
 
+/// Pattern-match-style URL routing
 #[macro_export]
 macro_rules! route_match {
     ($request_verb:ident, $url:expr, $( $verb:ident ( $( $match_url:tt )+ ) => $body:expr ),+, _ => $default:expr) => (
@@ -162,9 +118,7 @@ mod tests {
     pub const GET: &'static str = "GET";
     pub const POST: &'static str = "POST";
 
-    use super::num;
-    use super::rest;
-    use super::until;
+    use super::parsers::{num, rest, until};
 
     #[test]
     fn match_success() {
@@ -230,7 +184,6 @@ mod tests {
         assert!(route_match!(GET, "/foo/groucho:swordfish",
             GET ("/foo/", username = until(':'), password = rest) => 
                 username == "groucho" && password == "swordfish",
-            // GET (foo = five) => true,
             _ => false
         ));
     }
