@@ -1,6 +1,6 @@
 [package]
 name = "silk-router"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Eli Green <eli@zigr.org>"]
 description = "A library for URL routing"
 repository = "https://github.com/detzgk/silk"
