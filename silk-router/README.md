@@ -17,15 +17,20 @@ URL routing in the style of rust's pattern matching.
 TODO: measure and discuss. It should be good, right? :)
 * We only scan the URL once for parsing & matching
 * Everything can be allocated on the stack
+* Realistically, you end up needing to box your futures that you return, unless 
+  you're in the strange position where they all have the exact same type. A single
+  Box<> per request doesn't seem like too painful.
 
 #### Dependency Injection
 
 There is no need for a dependency injection framework because you can simply
-inject the right dependencies into your endpoint blocks:
+inject the right dependencies into your endpoint blocks. In the following snippet,
+imaging there is an `fn database()` that provides you with a connection to the
+database.
 
 ```rust
     route_match!(request.verb, request.url,
-        GET ("/authenticated/", remainder:rest) => {
+        GET ("/authenticated/", remainder = rest) => {
             match user_store(database()) {
                 Some(user) => route_match!(remainder,
                     "/user_details" => user_details(user)
