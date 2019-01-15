@@ -2,6 +2,8 @@
 //! syntax.
 //!
 //! ```rust
+//!     use silk_router::route_match;
+//! 
 //!     route_match!(request.verb, request.url,
 //!        GET ("/user") => user_list(),
 //!        GET ("/user/", id = num::<u32>) => user_details(id),
@@ -17,6 +19,8 @@
 //! match statements:
 //!
 //! ```rust
+//!     use silk_router::route_match;
+//!
 //!     route_match!(request.verb, request.url,
 //!         GET ("/user", id = num::<u32>, sub_url = rest) => {
 //!             let user = load_user(id);
@@ -63,20 +67,14 @@ pub fn matches(iter: &mut Peekable<Chars>, text: &'static str) -> bool {
 macro_rules! route_match {
     ($request_verb:expr, $url:expr, $( $verb:ident ( $( $match_url:tt )+ ) => $body:expr ),+, _ => $default:expr) => (
         {
-            #[allow(unused_imports)]
-            use matches;
-
             let mut url_iter = $url.chars().peekable();
-            branch!($request_verb, url_iter, $default, $( $body, $verb, ( $( $match_url )+ ) ),+ )
+            $crate::branch!($request_verb, url_iter, $default, $( $body, $verb, ( $( $match_url )+ ) ),+ )
         }
     );
     ($url:expr, $( ( $( $match_url:tt )+ ) => $body:expr ),+, _ => $default:expr) => (
         {
-            #[allow(unused_imports)]
-            use matches;
-
             let mut url_iter = $url.chars().peekable();
-            branch!(url_iter, $default, $( $body, ( $( $match_url )+ ) ),+ )
+            $crate::branch!(url_iter, $default, $( $body, ( $( $match_url )+ ) ),+ )
         }
     )
 }
@@ -86,10 +84,10 @@ macro_rules! branch {
     ($request_verb:expr, $iter:ident, $default:expr, $body:expr, $verb:expr, ( $( $url:tt )+ ), $( $bodies:expr, $verbs:ident, ( $( $urlses:tt )+ ) ),+) => {
         {
             let mut next_iter = $iter.clone();
-            if let Some(result) = match_verb!($request_verb, $verb, next_iter, $body, $($url)+) {
+            if let Some(result) = $crate::match_verb!($request_verb, $verb, next_iter, $body, $($url)+) {
                 result
             } else {
-                branch!($request_verb, $iter, $default, $( $bodies, $verbs, ( $( $urlses )+ ) ),+ )
+                $crate::branch!($request_verb, $iter, $default, $( $bodies, $verbs, ( $( $urlses )+ ) ),+ )
             }
         }
     };
@@ -106,7 +104,7 @@ macro_rules! branch {
             if let Some(result) = predicates!(next_iter, $body, $($url)+) {
                 result
             } else {
-                branch!($iter, $default, $( $bodies, ( $( $urlses )+ ) ),+ )
+                $crate::branch!($iter, $default, $( $bodies, ( $( $urlses )+ ) ),+ )
             }
         }
     };
@@ -123,7 +121,7 @@ macro_rules! branch {
 macro_rules! match_verb {
     ($request_verb:expr, $verb:expr, $iter:ident, $body:expr, $( $url:tt )+) => (
         if $request_verb == $verb {
-            predicates!($iter, $body, $($url)+)
+            $crate::predicates!($iter, $body, $($url)+)
         } else { None }
     )
 }
@@ -131,12 +129,12 @@ macro_rules! match_verb {
 #[macro_export]
 macro_rules! predicates {
     ($iter:ident, $body:expr, $first:tt, $( $rest:tt )+) => (
-        if matches(&mut $iter, $first) {
-            predicates!($iter, $body, $($rest)+)
+        if $crate::matches(&mut $iter, $first) {
+            $crate::predicates!($iter, $body, $($rest)+)
         } else { None }
     );
     ($iter:ident, $body:expr, $first:tt) => (
-        if matches(&mut $iter, $first) {
+        if $crate::matches(&mut $iter, $first) {
             if $iter.peek() == None {
                 Some($body)
             } else { None }
@@ -144,7 +142,7 @@ macro_rules! predicates {
     );
     ($iter:ident, $body:expr, $first:ident = $parser:expr, $( $rest:tt )+) => (
         if let Some($first) = $parser(&mut $iter) {
-            predicates!($iter, $body, $($rest)+)
+            $crate::predicates!($iter, $body, $($rest)+)
         } else { None }
     );
     ($iter:ident, $body:expr, $first:ident = $parser:expr) => (
@@ -161,6 +159,7 @@ mod tests {
     pub const GET: &'static str = "GET";
     pub const POST: &'static str = "POST";
 
+    use super::{route_match};
     use super::parsers::{num, rest, until};
 
     #[test]
