@@ -1,0 +1,10 @@
+[package]
+name = "silk-example"
+version = "0.1.0"
+authors = ["Eli Green <eli@zigr.org>"]
+edition = "2018"
+
+[dependencies]
+silk-router = { path = "../silk-router" }
+hyper = "0.12"
+futures = "0.1.25"

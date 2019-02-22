@@ -92,7 +92,7 @@ macro_rules! branch {
         }
     };
     ($request_verb:expr, $iter:ident, $default:expr, $body:expr, $verb:expr, ( $( $url:tt )+ ) ) => {
-        if let Some(result) = match_verb!($request_verb, $verb, $iter, $body, $($url)+) {
+        if let Some(result) = $crate::match_verb!($request_verb, $verb, $iter, $body, $($url)+) {
             result
         } else {
             $default
@@ -109,7 +109,7 @@ macro_rules! branch {
         }
     };
     ($iter:ident, $default:expr, $body:expr, ( $( $url:tt )+ ) ) => {
-        if let Some(result) = predicates!($iter, $body, $($url)+) {
+        if let Some(result) = $crate::predicates!($iter, $body, $($url)+) {
             result
         } else {
             $default
